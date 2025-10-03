@@ -13,19 +13,15 @@ const mainFlow = addKeyword([EVENTS.WELCOME])
             const userData = await getUserData(number, state);
 
             console.log(userData)
-            const data = {
-                name: "Usuario de Ejemplo",
-            }
-            // console.log(data)
             const dataIa = false
-            if (!data) {
-                return endFlow('⚠️ No estás registrado. Por favor regístrate aquí: https://link-de-ejemplo.com')
+            if (!userData) {
+                return endFlow('⚠️ No estás registrado. Por favor regístrate aquí: https://pagado-app.com/es')
             }
 
             if (dataIa) {
                 return gotoFlow(templateWithAI)
             } else {
-                await flowDynamic(`👋${data.name} ¡Bienvenido a *Pagado*! `)
+                await flowDynamic(`👋${userData.name} ¡Bienvenido a *Pagado*! `)
                 return gotoFlow(templateWithOutAI)
             }
 

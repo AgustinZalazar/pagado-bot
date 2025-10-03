@@ -1,5 +1,6 @@
 import axios from 'axios'
 type UserCache = {
+    name: string;
     email: string;
     categories: string[];
     accounts: string[];
@@ -7,7 +8,6 @@ type UserCache = {
     lastUpdated: number; // para TTL
 };
 
-const userCache = new Map<string, UserCache>();
 
 // Tiempo máximo de cache en milisegundos (ej: 5 minutos)
 const TTL = 5 * 60 * 1000;
@@ -21,7 +21,7 @@ export async function getUserData(userPhone: string, state: any) {
     }
 
     // ❌ Si no está cacheado o expiró, lo pedimos a la API externa
-    const { data } = await axios.get(`http://localhost:3000/api/user/phone/${userPhone}`, {
+    const { data } = await axios.get(`${process.env.API_URL}/api/user/phone/${userPhone}`, {
         headers: {
             'Authorization': `Bearer ${process.env.API_SECRET_TOKEN}`,
         },
@@ -49,6 +49,7 @@ export async function getUserData(userPhone: string, state: any) {
 
     // Lo guardamos en cache
     const newData: UserCache = {
+        name: data.name,
         email: data.email,
         categories: listCategories,
         accounts: formattedAccounts,
