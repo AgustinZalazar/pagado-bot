@@ -21,7 +21,7 @@ export async function getUserData(userPhone: string, state: any) {
     }
 
     // ❌ Si no está cacheado o expiró, lo pedimos a la API externa
-    const { data } = await axios.get(`${process.env.API_URL}/api/user/phone/${userPhone}`, {
+    const { data } = await axios.get(`${process.env.API_URL}/user/phone/${userPhone}`, {
         headers: {
             'Authorization': `Bearer ${process.env.API_SECRET_TOKEN}`,
         },
