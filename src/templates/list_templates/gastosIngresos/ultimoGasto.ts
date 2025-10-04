@@ -1,19 +1,15 @@
 import { addKeyword } from "@builderbot/bot";
 import axios from "axios";
+import { getUserData } from "~/cache/userCache";
 import { renderFormattedAmount } from "~/helpers/formatedAmount";
 
-export const ultimoGasto = addKeyword("Consultar ultimo").addAction(async (ctx, { provider, flowDynamic }) => {
+export const ultimoGasto = addKeyword("Consultar ultimo").addAction(async (ctx, { provider, flowDynamic, state }) => {
     try {
         const number = ctx.from
-        const localNumber = number.slice(-10)
-        const { data } = await axios.get(`${process.env.API_URL}/user/phone/${localNumber}`, {
-            headers: {
-                'Authorization': `Bearer ${process.env.API_SECRET_TOKEN}`,
-            },
-        })
+        const userData = await getUserData(number, state);
         const date = new Date().toISOString();
         const currentDate = date.split("T")[0];
-        const dataGastos = await axios.get(`${process.env.API_URL}/transaction?mail=${data.email}&month=${currentDate}`, {
+        const dataGastos = await axios.get(`${process.env.API_URL}/transaction?mail=${userData.email}&month=${currentDate}`, {
             headers: {
                 'Authorization': `Bearer ${process.env.API_SECRET_TOKEN}`,
             },

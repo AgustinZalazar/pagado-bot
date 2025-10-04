@@ -12,7 +12,6 @@ const mainFlow = addKeyword([EVENTS.WELCOME])
             const number = ctx.from
             const userData = await getUserData(number, state);
 
-            console.log(userData)
             const dataIa = false
             if (!userData) {
                 return endFlow('⚠️ No estás registrado. Por favor regístrate aquí: https://pagado-app.com/es')

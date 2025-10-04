@@ -1,10 +1,10 @@
 import axios from 'axios'
-type UserCache = {
+export type UserCache = {
     name: string;
     email: string;
-    categories: string[];
-    accounts: string[];
-    paymentMethods: string[];
+    categories: { nombre: string }[];
+    accounts: { id: string, title: string }[];
+    paymentMethods: { id: string, title: string, cardType: string, idAccount: string }[];
     lastUpdated: number; // para TTL
 };
 

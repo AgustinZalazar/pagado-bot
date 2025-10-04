@@ -1,32 +1,26 @@
 import { addKeyword } from "@builderbot/bot";
 import axios from "axios";
+import { getUserData, UserCache } from "~/cache/userCache";
 
 export const agregarGasto = addKeyword("Agregar un gasto")
     .addAction(async (ctx, { state, provider, flowDynamic }) => {
         try {
             const number = ctx.from;
-            const localNumber = number.slice(-10);
+            const userData = await getUserData(number, state);
 
-            // Obtener datos del usuario
-            const { data } = await axios.get(`${process.env.API_URL}/user/phone/${localNumber}`, {
-                headers: {
-                    'Authorization': `Bearer ${process.env.API_SECRET_TOKEN}`,
-                },
-            });
-
-            await state.update({ user: data });
-            await state.update({ email: data.email });
+            // await state.update({ user: data });
+            // await state.update({ email: data.email });
 
             // Obtener categorías
-            const categories = await axios.get(`${process.env.API_URL}/category?mail=${data.email}`, {
-                headers: {
-                    'Authorization': `Bearer ${process.env.API_SECRET_TOKEN}`,
-                },
-            });
+            // const categories = await axios.get(`${process.env.API_URL}/category?mail=${userData.email}`, {
+            //     headers: {
+            //         'Authorization': `Bearer ${process.env.API_SECRET_TOKEN}`,
+            //     },
+            // });
 
-            const listCategories = categories.data.formattedCategories
+            // const listCategories = categories.data.formattedCategories
 
-            if (!listCategories || listCategories.length === 0) {
+            if (!userData.categories || userData.categories.length === 0) {
                 return await flowDynamic("⚠️ No tenés categorías cargadas. Agregá una categoría desde la web antes de continuar.");
             }
 
@@ -39,7 +33,7 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                     sections: [
                         {
                             title: 'Categorías',
-                            rows: listCategories.map((cat) => ({
+                            rows: userData.categories.map((cat) => ({
                                 id: `categoria_ingreso_${cat.nombre}`,
                                 title: cat.nombre,
                             }))
@@ -57,15 +51,16 @@ export const agregarGasto = addKeyword("Agregar un gasto")
     .addAnswer('', { capture: true }, async (ctx, { state, provider, flowDynamic }) => {
         const catName = ctx.body.replace("categoria_ingreso_", "");
         await state.update({ category: catName });
+        const userCached: UserCache | null = await state.get("userCache");
 
-        const email = await state.get("email");
+        // const email = await state.get("email");
         try {
-            const { data: accountData } = await axios.get(`${process.env.API_URL}/accounts?mail=${email}`);
+            // const { data: accountData } = await axios.get(`${process.env.API_URL}/accounts?mail=${email}`);
 
-            // console.log(accountData)
-            const listAccounts = accountData.formattedAccounts;
+            // // console.log(accountData)
+            // const listAccounts = accountData.formattedAccounts;
 
-            if (!listAccounts?.length) {
+            if (!userCached.accounts?.length) {
                 return await flowDynamic("⚠️ No tenés cuentas registradas. Agregá una desde la web antes de continuar.");
             }
 
@@ -77,7 +72,7 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                     button: 'Ver cuentas',
                     sections: [{
                         title: 'Cuentas',
-                        rows: listAccounts.map(acc => ({
+                        rows: userCached.accounts?.map(acc => ({
                             id: `acc_${acc.id}__${acc.title}`,
                             title: acc.title,
                         }))
@@ -98,19 +93,20 @@ export const agregarGasto = addKeyword("Agregar un gasto")
 
         await state.update({ selectedAccount: accountName, accountId });
 
-        const email = await state.get("email");
+        const userCached: UserCache | null = await state.get("userCache");
+        // const email = await state.get("email");
 
         try {
-            const { data: methodData } = await axios.get(`${process.env.API_URL}/methods?mail=${email}`, {
-                headers: { Authorization: `Bearer ${process.env.API_SECRET_TOKEN}` },
-            });
+            // const { data: methodData } = await axios.get(`${process.env.API_URL}/methods?mail=${email}`, {
+            //     headers: { Authorization: `Bearer ${process.env.API_SECRET_TOKEN}` },
+            // });
 
-            const listMethods = methodData.formattedMethods;
+            // const listMethods = methodData.formattedMethods;
 
-            if (!listMethods?.length) {
+            if (!userCached.paymentMethods?.length) {
                 return await flowDynamic("⚠️ No tenés métodos de pago cargados. Agregá uno desde la web antes de continuar.");
             }
-            const filteredMethods = listMethods.filter((item) => item.idAccount === accountId)
+            const filteredMethods = userCached.paymentMethods.filter((item) => item.idAccount === accountId)
 
             const truncate = (text: string, max = 24) =>
                 text.length > max ? text.slice(0, max - 1) + '…' : text;
@@ -153,7 +149,8 @@ export const agregarGasto = addKeyword("Agregar un gasto")
 
     // Capturar mensaje del usuario con los datos y hacer POST
     .addAction({ capture: true }, async (ctx, { state, flowDynamic }) => {
-        const email = await state.get("email");
+        // const email = await state.get("email");
+        const userCached: UserCache | null = await state.get("userCache");
         const category = await state.get("category");
         const account = await state.get('selectedAccount');
         const method = await state.get("selectedMethod");
@@ -180,7 +177,7 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                 method
             }
 
-            const res = await axios.post(`${process.env.API_URL}/transaction?mail=${email}`, body, {
+            const res = await axios.post(`${process.env.API_URL}/transaction?mail=${userCached.email}`, body, {
                 headers: {
                     Authorization: `Bearer ${process.env.API_SECRET_TOKEN}`
                 },
