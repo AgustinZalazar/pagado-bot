@@ -2,9 +2,9 @@ import axios from 'axios'
 export type UserCache = {
     name: string;
     email: string;
-    categories: { nombre: string }[];
+    categories: { id: string, nombre: string, color?: string, porcentaje?: string, icon?: string | null }[];
     accounts: { id: string, title: string }[];
-    paymentMethods: { id: string, title: string, cardType: string, idAccount: string }[];
+    paymentMethods: { id: string, title: string, cardType?: string, idAccount: string }[];
     lastUpdated: number; // para TTL
 };
 

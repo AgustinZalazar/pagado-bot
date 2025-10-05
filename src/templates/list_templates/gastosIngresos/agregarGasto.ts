@@ -27,6 +27,15 @@ export const agregarGasto = addKeyword("Agregar un gasto")
 
             console.log({ userData: userData.categories });
 
+            // Preparar filas de categorías
+            const categoryRows: any[] = userData.categories.map((cat) => ({
+                id: `categoria_ingreso_${cat.nombre}`,
+                title: cat.nombre,
+            }));
+
+            // Agregar opción de cancelar
+            categoryRows.push({ id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' });
+
             const list = {
                 header: { type: 'text', text: '🗂️ Categorías disponibles' },
                 body: { text: 'Selecciona una categoría para tu gasto:\n\n_Escribí "cancelar" en cualquier momento para volver al menú principal_' },
@@ -36,13 +45,7 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                     sections: [
                         {
                             title: 'Categorías',
-                            rows: [
-                                ...userData.categories.map((cat) => ({
-                                    id: `categoria_ingreso_${cat.nombre}`,
-                                    title: cat.nombre,
-                                })),
-                                { id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' }
-                            ]
+                            rows: categoryRows
                         }
                     ]
                 }
@@ -77,6 +80,15 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                 return await flowDynamic("⚠️ No tenés cuentas registradas. Agregá una desde la web antes de continuar.");
             }
 
+            // Preparar filas de cuentas
+            const accountRows: any[] = userCached.accounts.map(acc => ({
+                id: `acc_${acc.id}__${acc.title}`,
+                title: acc.title,
+            }));
+
+            // Agregar opción de cancelar
+            accountRows.push({ id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' });
+
             const list = {
                 header: { type: 'text', text: '🏦 Cuentas disponibles' },
                 body: { text: 'Seleccioná una cuenta:' },
@@ -85,13 +97,7 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                     button: 'Ver cuentas',
                     sections: [{
                         title: 'Cuentas',
-                        rows: [
-                            ...userCached.accounts?.map(acc => ({
-                                id: `acc_${acc.id}__${acc.title}`,
-                                title: acc.title,
-                            })),
-                            { id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' }
-                        ]
+                        rows: accountRows
                     }]
                 }
             };
@@ -133,6 +139,20 @@ export const agregarGasto = addKeyword("Agregar un gasto")
 
             const truncate = (text: string, max = 24) =>
                 text.length > max ? text.slice(0, max - 1) + '…' : text;
+
+            // Preparar filas de métodos de pago
+            const methodRows: any[] = filteredMethods.map(method => ({
+                id: `metodo_${method.id}__${method.title}`,
+                title: truncate(
+                    method.cardType
+                        ? `${method.title} (${method.cardType})`
+                        : method.title
+                ),
+            }));
+
+            // Agregar opción de cancelar
+            methodRows.push({ id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' });
+
             const list = {
                 header: { type: 'text', text: '💳 Métodos de pago' },
                 body: { text: 'Seleccioná un método de pago:' },
@@ -141,17 +161,7 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                     button: 'Ver métodos',
                     sections: [{
                         title: 'Métodos de pago',
-                        rows: [
-                            ...filteredMethods.map(method => ({
-                                id: `metodo_${method.id}__${method.title}`, // asegurate de que el id también sea único
-                                title: truncate(
-                                    method.cardType
-                                        ? `${method.title} (${method.cardType})`
-                                        : method.title
-                                ),
-                            })),
-                            { id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' }
-                        ]
+                        rows: methodRows
                     }]
                 }
             };
