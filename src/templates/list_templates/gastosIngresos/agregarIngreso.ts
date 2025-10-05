@@ -3,7 +3,7 @@ import axios from "axios";
 import { getUserData, UserCache } from "~/cache/userCache";
 import { templateWithOutAI } from "~/templates/templateWithOutAI";
 
-export const agregarIngreso = addKeyword("agregar_ingreso")
+export const agregarIngreso = addKeyword("Agregar ingreso")
     .addAction(async (ctx, { state, provider, flowDynamic }) => {
         try {
             const number = ctx.from;
@@ -20,7 +20,7 @@ export const agregarIngreso = addKeyword("agregar_ingreso")
             // });
 
             // const listCategories = categories.data.formattedCategories
-
+            console.log(userData.categories)
 
             if (!userData.categories || userData.categories.length === 0) {
                 return await flowDynamic("⚠️ No tenés categorías cargadas. Agregá una categoría desde la web antes de continuar.");
