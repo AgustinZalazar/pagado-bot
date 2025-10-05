@@ -1,6 +1,7 @@
 import { addKeyword } from "@builderbot/bot";
 import axios from "axios";
 import { getUserData, UserCache } from "~/cache/userCache";
+import { templateWithOutAI } from "~/templates/templateWithOutAI";
 
 export const agregarGasto = addKeyword("Agregar un gasto")
     .addAction(async (ctx, { state, provider, flowDynamic }) => {
@@ -24,19 +25,24 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                 return await flowDynamic("⚠️ No tenés categorías cargadas. Agregá una categoría desde la web antes de continuar.");
             }
 
+            console.log({ userData: userData.categories });
+
             const list = {
                 header: { type: 'text', text: '🗂️ Categorías disponibles' },
-                body: { text: 'Selecciona una categoría para tu ingreso:' },
+                body: { text: 'Selecciona una categoría para tu gasto:\n\n_Escribí "cancelar" en cualquier momento para volver al menú principal_' },
                 footer: { text: 'Pagado - Tu asistente financiero' },
                 action: {
                     button: 'Ver categorías',
                     sections: [
                         {
                             title: 'Categorías',
-                            rows: userData.categories.map((cat) => ({
-                                id: `categoria_ingreso_${cat.nombre}`,
-                                title: cat.nombre,
-                            }))
+                            rows: [
+                                ...userData.categories.map((cat) => ({
+                                    id: `categoria_ingreso_${cat.nombre}`,
+                                    title: cat.nombre,
+                                })),
+                                { id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' }
+                            ]
                         }
                     ]
                 }
@@ -48,7 +54,14 @@ export const agregarGasto = addKeyword("Agregar un gasto")
             await provider.sendMessage(ctx.from, '🚫 Error al verificar tu cuenta o cargar categorías.');
         }
     })// Paso 2: Captura de categoría y mostrar cuentas
-    .addAnswer('', { capture: true }, async (ctx, { state, provider, flowDynamic }) => {
+    .addAnswer('', { capture: true }, async (ctx, { state, provider, flowDynamic, gotoFlow }) => {
+        // Verificar si el usuario quiere cancelar
+        const userInput = ctx.body.toLowerCase().trim();
+        if (userInput === 'cancelar' || userInput === 'salir' || userInput === 'volver' || ctx.body === 'cancelar') {
+            await flowDynamic("🔙 Operación cancelada. Volviendo al menú principal...");
+            return gotoFlow(templateWithOutAI);
+        }
+
         const catName = ctx.body.replace("categoria_ingreso_", "");
         await state.update({ category: catName });
         const userCached: UserCache | null = await state.get("userCache");
@@ -72,10 +85,13 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                     button: 'Ver cuentas',
                     sections: [{
                         title: 'Cuentas',
-                        rows: userCached.accounts?.map(acc => ({
-                            id: `acc_${acc.id}__${acc.title}`,
-                            title: acc.title,
-                        }))
+                        rows: [
+                            ...userCached.accounts?.map(acc => ({
+                                id: `acc_${acc.id}__${acc.title}`,
+                                title: acc.title,
+                            })),
+                            { id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' }
+                        ]
                     }]
                 }
             };
@@ -87,7 +103,14 @@ export const agregarGasto = addKeyword("Agregar un gasto")
         }
     })
     // Paso 3: Captura de cuenta y mostrar métodos de pago
-    .addAnswer('', { capture: true }, async (ctx, { state, provider, flowDynamic }) => {
+    .addAnswer('', { capture: true }, async (ctx, { state, provider, flowDynamic, gotoFlow }) => {
+        // Verificar si el usuario quiere cancelar
+        const userInput = ctx.body.toLowerCase().trim();
+        if (userInput === 'cancelar' || userInput === 'salir' || userInput === 'volver' || ctx.body === 'cancelar') {
+            await flowDynamic("🔙 Operación cancelada. Volviendo al menú principal...");
+            return gotoFlow(templateWithOutAI);
+        }
+
         const accountData = ctx.body.replace("acc_", ""); // acc_id__nombre
         const [accountId, accountName] = accountData.split("__");
 
@@ -118,14 +141,17 @@ export const agregarGasto = addKeyword("Agregar un gasto")
                     button: 'Ver métodos',
                     sections: [{
                         title: 'Métodos de pago',
-                        rows: filteredMethods.map(method => ({
-                            id: `metodo_${method.id}__${method.title}`, // asegurate de que el id también sea único
-                            title: truncate(
-                                method.cardType
-                                    ? `${method.title} (${method.cardType})`
-                                    : method.title
-                            ),
-                        }))
+                        rows: [
+                            ...filteredMethods.map(method => ({
+                                id: `metodo_${method.id}__${method.title}`, // asegurate de que el id también sea único
+                                title: truncate(
+                                    method.cardType
+                                        ? `${method.title} (${method.cardType})`
+                                        : method.title
+                                ),
+                            })),
+                            { id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' }
+                        ]
                     }]
                 }
             };
@@ -136,20 +162,32 @@ export const agregarGasto = addKeyword("Agregar un gasto")
             await flowDynamic("🚫 Ocurrió un error al obtener los métodos de pago. Intenta más tarde.");
         }
     })
-    // Capturar categoría seleccionada
-    .addAction({ capture: true }, async (ctx, { state, flowDynamic }) => {
+    // Capturar método de pago seleccionado
+    .addAction({ capture: true }, async (ctx, { state, flowDynamic, gotoFlow }) => {
+        // Verificar si el usuario quiere cancelar
+        const userInput = ctx.body.toLowerCase().trim();
+        if (userInput === 'cancelar' || userInput === 'salir' || userInput === 'volver' || ctx.body === 'cancelar') {
+            await flowDynamic("🔙 Operación cancelada. Volviendo al menú principal...");
+            return gotoFlow(templateWithOutAI);
+        }
+
         const selectedMethod = ctx.body.replace("metodo_", "");
         const [methodId, methodName] = selectedMethod.split("__");
 
         await state.update({ selectedMethod: methodName, methodId });
-        // await state.update({ selectedMethod });
 
-        return await flowDynamic("✍️ Ingresá los datos de la transaccion separados por coma:\n*Descripción, Monto, Moneda*\nEj: Sueldo, 200000, ARS");
+        return await flowDynamic("✍️ Ingresá los datos de la transaccion separados por coma:\n*Descripción, Monto, Moneda*\nEj: Almuerzo, 5000, ARS\n\n_Escribí \"cancelar\" para volver al menú principal_");
     })
 
     // Capturar mensaje del usuario con los datos y hacer POST
-    .addAction({ capture: true }, async (ctx, { state, flowDynamic }) => {
-        // const email = await state.get("email");
+    .addAction({ capture: true }, async (ctx, { state, flowDynamic, gotoFlow }) => {
+        // Verificar si el usuario quiere cancelar
+        const userInput = ctx.body.toLowerCase().trim();
+        if (userInput === 'cancelar' || userInput === 'salir' || userInput === 'volver') {
+            await flowDynamic("🔙 Operación cancelada. Volviendo al menú principal...");
+            return gotoFlow(templateWithOutAI);
+        }
+
         const userCached: UserCache | null = await state.get("userCache");
         const category = await state.get("category");
         const account = await state.get('selectedAccount');
@@ -160,7 +198,7 @@ export const agregarGasto = addKeyword("Agregar un gasto")
         const amount = parseFloat(rawAmount.replace(",", "."));
 
         if (!description || isNaN(amount) || !currency) {
-            return await flowDynamic("❌ Formato inválido. Usá: Descripción, Monto, Moneda\nEj: Sueldo, 200000, ARS");
+            return await flowDynamic("❌ Formato inválido. Usá: Descripción, Monto, Moneda\nEj: Almuerzo, 5000, ARS\n\n_Escribí \"cancelar\" para volver al menú principal_");
         }
 
         try {
