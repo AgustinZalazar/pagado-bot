@@ -20,25 +20,30 @@ export const agregarIngreso = addKeyword("Agregar ingreso")
             // });
 
             // const listCategories = categories.data.formattedCategories
-            console.log(userData.categories)
-
             if (!userData.categories || userData.categories.length === 0) {
                 return await flowDynamic("⚠️ No tenés categorías cargadas. Agregá una categoría desde la web antes de continuar.");
             }
 
-            // Preparar filas de categorías
-            const categoryRows: any[] = userData.categories.map((cat) => ({
-                id: `categoria_ingreso_${cat.nombre}`,
-                title: cat.nombre,
+            console.log({ userData: userData.categories });
+
+            // Preparar filas de categorías (máximo 10 por sección según WhatsApp API)
+            const categoryRows: any[] = userData.categories.slice(0, 9).map((cat) => ({
+                id: `cat_${cat.id}`,
+                title: cat.nombre.substring(0, 24), // Máximo 24 caracteres
+                description: ''
             }));
 
             // Agregar opción de cancelar
-            categoryRows.push({ id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' });
+            categoryRows.push({
+                id: 'cancelar',
+                title: '❌ Cancelar',
+                description: 'Volver al menú'
+            });
 
             const list = {
                 header: { type: 'text', text: '🗂️ Categorías disponibles' },
-                body: { text: 'Selecciona una categoría para tu ingreso:\n\n_Escribí "cancelar" en cualquier momento para volver al menú principal_' },
-                footer: { text: 'Pagado - Tu asistente financiero' },
+                body: { text: 'Selecciona una categoría para tu ingreso' },
+                footer: { text: 'Escribe "cancelar" para volver' },
                 action: {
                     button: 'Ver categorías',
                     sections: [
@@ -55,7 +60,7 @@ export const agregarIngreso = addKeyword("Agregar ingreso")
             console.error('Error al verificar usuario o cargar categorías:', err);
             await provider.sendMessage(ctx.from, '🚫 Error al verificar tu cuenta o cargar categorías.');
         }
-    })// Capturar categoría seleccionada
+    })// Paso 2: Captura de categoría y mostrar cuentas
     .addAnswer('', { capture: true }, async (ctx, { state, provider, flowDynamic, gotoFlow }) => {
         // Verificar si el usuario quiere cancelar
         const userInput = ctx.body.toLowerCase().trim();
@@ -64,9 +69,15 @@ export const agregarIngreso = addKeyword("Agregar ingreso")
             return gotoFlow(templateWithOutAI);
         }
 
-        const catName = ctx.body.replace("categoria_ingreso_", "");
-        await state.update({ category: catName });
+        // Extraer el ID de categoría
+        const catId = ctx.body.replace("cat_", "");
         const userCached: UserCache | null = await state.get("userCache");
+
+        // Buscar el nombre de la categoría por ID
+        const selectedCategory = userCached.categories.find(cat => cat.id === catId);
+        const catName = selectedCategory ? selectedCategory.nombre : ctx.body;
+
+        await state.update({ category: catName });
 
         // const email = await state.get("email");
         try {
@@ -79,19 +90,24 @@ export const agregarIngreso = addKeyword("Agregar ingreso")
                 return await flowDynamic("⚠️ No tenés cuentas registradas. Agregá una desde la web antes de continuar.");
             }
 
-            // Preparar filas de cuentas
-            const accountRows: any[] = userCached.accounts.map(acc => ({
-                id: `acc_${acc.id}__${acc.title}`,
-                title: acc.title,
+            // Preparar filas de cuentas (máximo 10)
+            const accountRows: any[] = userCached.accounts.slice(0, 9).map(acc => ({
+                id: `acc_${acc.id}`,
+                title: acc.title.substring(0, 24),
+                description: ''
             }));
 
             // Agregar opción de cancelar
-            accountRows.push({ id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' });
+            accountRows.push({
+                id: 'cancelar',
+                title: '❌ Cancelar',
+                description: 'Volver al menú'
+            });
 
             const list = {
                 header: { type: 'text', text: '🏦 Cuentas disponibles' },
-                body: { text: 'Seleccioná una cuenta:' },
-                footer: { text: 'Pagado - Tu asistente financiero' },
+                body: { text: 'Selecciona una cuenta' },
+                footer: { text: 'Escribe "cancelar" para volver' },
                 action: {
                     button: 'Ver cuentas',
                     sections: [{
@@ -116,13 +132,15 @@ export const agregarIngreso = addKeyword("Agregar ingreso")
             return gotoFlow(templateWithOutAI);
         }
 
-        const accountData = ctx.body.replace("acc_", ""); // acc_id__nombre
-        const [accountId, accountName] = accountData.split("__");
+        // Extraer el ID de cuenta
+        const accountId = ctx.body.replace("acc_", "");
+        const userCached: UserCache | null = await state.get("userCache");
+
+        // Buscar el nombre de la cuenta por ID
+        const selectedAccount = userCached.accounts.find(acc => acc.id === accountId);
+        const accountName = selectedAccount ? selectedAccount.title : ctx.body;
 
         await state.update({ selectedAccount: accountName, accountId });
-
-        const userCached: UserCache | null = await state.get("userCache");
-        // const email = await state.get("email");
 
         try {
             // const { data: methodData } = await axios.get(`${process.env.API_URL}/methods?mail=${email}`, {
@@ -136,30 +154,33 @@ export const agregarIngreso = addKeyword("Agregar ingreso")
             }
             const filteredMethods = userCached.paymentMethods.filter((item) => item.idAccount === accountId)
 
-            const truncate = (text: string, max = 24) =>
-                text.length > max ? text.slice(0, max - 1) + '…' : text;
-
-            // Preparar filas de métodos de pago
-            const methodRows: any[] = filteredMethods.map(method => ({
-                id: `metodo_${method.id}__${method.title}`,
-                title: truncate(
-                    method.cardType
-                        ? `${method.title} (${method.cardType})`
-                        : method.title
-                ),
-            }));
+            // Preparar filas de métodos de pago (máximo 10)
+            const methodRows: any[] = filteredMethods.slice(0, 9).map(method => {
+                const displayTitle = method.cardType
+                    ? `${method.title} (${method.cardType})`
+                    : method.title;
+                return {
+                    id: `met_${method.id}`,
+                    title: displayTitle.substring(0, 24),
+                    description: ''
+                };
+            });
 
             // Agregar opción de cancelar
-            methodRows.push({ id: 'cancelar', title: '❌ Cancelar', description: 'Volver al menú principal' });
+            methodRows.push({
+                id: 'cancelar',
+                title: '❌ Cancelar',
+                description: 'Volver al menú'
+            });
 
             const list = {
                 header: { type: 'text', text: '💳 Métodos de pago' },
-                body: { text: 'Seleccioná un método de pago:' },
-                footer: { text: 'Pagado - Tu asistente financiero' },
+                body: { text: 'Selecciona un método de pago' },
+                footer: { text: 'Escribe "cancelar" para volver' },
                 action: {
                     button: 'Ver métodos',
                     sections: [{
-                        title: 'Métodos de pago',
+                        title: 'Métodos',
                         rows: methodRows
                     }]
                 }
@@ -180,8 +201,13 @@ export const agregarIngreso = addKeyword("Agregar ingreso")
             return gotoFlow(templateWithOutAI);
         }
 
-        const selectedMethod = ctx.body.replace("metodo_", "");
-        const [methodId, methodName] = selectedMethod.split("__");
+        // Extraer el ID de método
+        const methodId = ctx.body.replace("met_", "");
+        const userCached: UserCache | null = await state.get("userCache");
+
+        // Buscar el nombre del método por ID
+        const selectedMethodObj = userCached.paymentMethods.find(met => met.id === methodId);
+        const methodName = selectedMethodObj ? selectedMethodObj.title : ctx.body;
 
         await state.update({ selectedMethod: methodName, methodId });
 
