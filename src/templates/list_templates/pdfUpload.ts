@@ -115,4 +115,106 @@ export const pdfUpload = addKeyword(EVENTS.DOCUMENT)
             console.error("❌ Error en pdfUpload:", err);
             return await flowDynamic("🚫 Ocurrió un error. Intenta nuevamente.");
         }
+    })
+    .addAction({ capture: true }, async (ctx, { flowDynamic, state, fallBack }) => {
+        try {
+            const number = ctx.from;
+            const userData = await getUserData(number, state);
+            const pendingTransaction = await state.get("pendingTransaction");
+
+            // Solo procesar si hay una transacción pendiente del flujo de imagen
+            if (!pendingTransaction) {
+                return;
+            }
+
+            const userMessage = ctx.body ? ctx.body.toLowerCase().trim() : '';
+
+            // Procesar selección de cuenta
+            if (pendingTransaction.needsAccount) {
+                const selectedAccount = userData.accounts.find((acc, index) =>
+                    (index + 1).toString() === ctx.body.trim() ||
+                    acc.title.toLowerCase().includes(userMessage) ||
+                    userMessage.includes(acc.title.toLowerCase())
+                );
+
+                if (!selectedAccount) {
+                    await flowDynamic("❌ Cuenta no válida. Por favor selecciona una cuenta de la lista (número o nombre).");
+                    return fallBack();
+                }
+
+                // Actualizar transacción con la cuenta y mostrar métodos de pago
+                const filteredMethods = userData.paymentMethods.filter(m => m.idAccount === selectedAccount.id);
+
+                if (filteredMethods.length === 0) {
+                    await flowDynamic("⚠️ No tienes métodos de pago configurados para esta cuenta. Por favor agrégalos desde la web.");
+                    await state.update({ pendingTransaction: null });
+                    return;
+                }
+
+                const methodsList = filteredMethods.map((method, index) => {
+                    const displayTitle = method.cardType ? `${method.title} (${method.cardType})` : method.title;
+                    return `${index + 1}. ${displayTitle}`;
+                }).join('\n');
+
+                await state.update({
+                    pendingTransaction: {
+                        ...pendingTransaction,
+                        account: selectedAccount.title,
+                        accountId: selectedAccount.id,
+                        needsAccount: false,
+                        needsPaymentMethod: true
+                    }
+                });
+
+                await flowDynamic(`✅ Cuenta seleccionada: *${selectedAccount.title}*\n\n💳 *Selecciona un método de pago* (responde con el número o nombre):\n\n${methodsList}\n\n_Escribe el número o nombre del método_`);
+                return fallBack();
+            }
+
+            // Procesar selección de método de pago
+            if (pendingTransaction.needsPaymentMethod) {
+                const accountId = pendingTransaction.accountId;
+                const filteredMethods = userData.paymentMethods.filter(m => m.idAccount === accountId);
+
+                const selectedMethod = filteredMethods.find((method, index) => {
+                    const methodTitleLower = method.title.toLowerCase();
+                    const fullTitleLower = method.cardType
+                        ? `${method.title} (${method.cardType})`.toLowerCase()
+                        : methodTitleLower;
+
+                    return (index + 1).toString() === ctx.body.trim() ||
+                        methodTitleLower.includes(userMessage) ||
+                        userMessage.includes(methodTitleLower) ||
+                        fullTitleLower.includes(userMessage) ||
+                        userMessage.includes(fullTitleLower);
+                });
+
+                if (!selectedMethod) {
+                    await flowDynamic("❌ Método de pago no válido. Por favor selecciona un método de la lista (número o nombre).");
+                    return fallBack();
+                }
+
+                // Crear la transacción completa
+                await createTransaction(userData.email, {
+                    description: pendingTransaction.description || 'Gasto registrado desde pdf',
+                    type: pendingTransaction.type,
+                    category: pendingTransaction.category,
+                    amount: pendingTransaction.amount,
+                    currency: pendingTransaction.currency,
+                    account: pendingTransaction.account,
+                    method: selectedMethod.title
+                });
+
+                await flowDynamic(`✅ *Gasto registrado exitosamente*\n\n📝*Descripcion:* $${pendingTransaction.description}\n💰 *Monto:* $${pendingTransaction.amount} ${pendingTransaction.currency}\n📂 *Categoría:* ${pendingTransaction.category}\n🏦 *Cuenta:* ${pendingTransaction.account}\n💳 *Método:* ${selectedMethod.title}}\n\n_¿Necesitas algo más?_`);
+
+                // Limpiar transacción pendiente
+                await state.update({ pendingTransaction: null });
+                await state.update({ activeSession: true });
+                return;
+            }
+
+        } catch (err) {
+            console.error("❌ Error procesando respuesta en imageUpload:", err);
+            await flowDynamic("🚫 Ocurrió un error. Intenta nuevamente.");
+            return fallBack();
+        }
     });

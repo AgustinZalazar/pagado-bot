@@ -156,7 +156,6 @@ export const audioUpload = addKeyword(EVENTS.VOICE_NOTE)
 
             // Procesar selección de cuenta
             if (pendingTransaction.needsAccount) {
-                console.log('--- Processing account selection in imageUpload ---');
                 const selectedAccount = userData.accounts.find((acc, index) =>
                     (index + 1).toString() === ctx.body.trim() ||
                     acc.title.toLowerCase().includes(userMessage) ||
@@ -198,7 +197,6 @@ export const audioUpload = addKeyword(EVENTS.VOICE_NOTE)
 
             // Procesar selección de método de pago
             if (pendingTransaction.needsPaymentMethod) {
-                console.log('--- Processing payment method selection in audioMessage ---');
                 const accountId = pendingTransaction.accountId;
                 const filteredMethods = userData.paymentMethods.filter(m => m.idAccount === accountId);
 
