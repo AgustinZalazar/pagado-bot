@@ -4,7 +4,7 @@ import template from "./templates"
 import { provider } from "./provider"
 
 
-const PORT = process.env.PORT ?? 3008
+const PORT = process.env.PORT ?? 3030
 
 const main = async () => {
     const adapterProvider = provider;

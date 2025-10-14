@@ -14,21 +14,23 @@ import { gastos } from "./list_templates/gastos";
 import { agregarGasto } from "./list_templates/gastosIngresos/agregarGasto";
 import { imageUpload } from "./list_templates/imageUpload";
 import { audioUpload } from "./list_templates/audioMessage";
+import { pdfUpload } from "./list_templates/pdfUpload";
 
 export default createFlow([
+    imageUpload,
+    audioUpload,
+    pdfUpload,
     mainFlow,
+    templateWithAI,
+    templateWithOutAI,
     ingresos,
     gastosRecurrentes,
     deudas,
     ahorros,
     inversiones,
-    templateWithAI,
-    templateWithOutAI,
     agregarIngreso,
     ultimoIngreso,
     ultimoGasto,
     gastos,
-    agregarGasto,
-    imageUpload,
-    audioUpload
+    agregarGasto
 ])

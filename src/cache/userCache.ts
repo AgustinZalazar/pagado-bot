@@ -5,7 +5,9 @@ export type UserCache = {
     categories: { id: string, nombre: string, color?: string, porcentaje?: string, icon?: string | null }[];
     accounts: { id: string, title: string }[];
     paymentMethods: { id: string, title: string, cardType?: string, idAccount: string }[];
+    subscription?: boolean; // indica si tiene suscripción activa
     lastUpdated: number; // para TTL
+    isFirstAccess?: boolean; // indica si es el primer acceso del usuario
 };
 
 
@@ -54,7 +56,9 @@ export async function getUserData(userPhone: string, state: any) {
         categories: listCategories,
         accounts: formattedAccounts,
         paymentMethods: formattedMethods,
+        subscription: data.subscription || false, // obtener del API
         lastUpdated: Date.now(),
+        isFirstAccess: data.isFirstAccess || false, // obtener del API
     };
 
     await state.update({ userCache: newData });

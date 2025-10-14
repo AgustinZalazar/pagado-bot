@@ -16,7 +16,8 @@
     "@builderbot/provider-meta": "1.2.2",
     "axios": "^1.9.0",
     "dotenv": "^16.4.5",
-    "openai": "^5.19.1"
+    "openai": "^5.19.1",
+    "pdf2json": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
