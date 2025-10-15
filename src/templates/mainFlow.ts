@@ -31,7 +31,7 @@ const mainFlow = addKeyword([EVENTS.WELCOME])
             // Marcar sesión como activa
             await state.update({ activeSession: true });
 
-            console.log(`Usuario: ${userData.name}, Suscripción: ${userData.subscription}, AI Access: ${hasAIAccess}, Tipo de mensaje: ${ctx.type}`);
+            // console.log(`Usuario: ${userData.name}, Suscripción: ${userData.subscription}, AI Access: ${hasAIAccess}, Tipo de mensaje: ${ctx.type}`);
 
             // Verificar si tiene suscripción Y está autorizado para usar IA
             if (userData.subscription && hasAIAccess) {
